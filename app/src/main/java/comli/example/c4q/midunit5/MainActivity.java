@@ -1,10 +1,18 @@
 package comli.example.c4q.midunit5;
 
+import android.app.Dialog;
+import android.content.SharedPreferences;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.support.v7.widget.GridLayoutManager;
 import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.RecyclerView;
+import android.util.Log;
+import android.view.Menu;
+import android.view.MenuInflater;
+import android.view.MenuItem;
+
+import com.google.gson.Gson;
 
 import comli.example.c4q.midunit5.Adapter.Adapter;
 import comli.example.c4q.midunit5.models.Users;
@@ -16,9 +24,14 @@ import retrofit2.converter.gson.GsonConverterFactory;
 
 public class MainActivity extends AppCompatActivity {
 
+    private static final String TAG = "MainActivity";
     private RecyclerView recyclerView;
     private Adapter adapter;
     private Users users;
+    private SharedPreferences sharedPreferences;
+    private boolean Refresh;
+    private static final String INSTANCE_STATE_KEY = "Users";
+    private Dialog mProgressDialog;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -26,8 +39,20 @@ public class MainActivity extends AppCompatActivity {
         setContentView(R.layout.activity_main);
 
         recyclerView = findViewById(R.id.recyclerView);
-        GridLayoutManager layoutManager = new GridLayoutManager(MainActivity.this,2, LinearLayoutManager.VERTICAL,false);
+        GridLayoutManager layoutManager = new GridLayoutManager(MainActivity.this, 4, LinearLayoutManager.VERTICAL, false);
         recyclerView.setLayoutManager(layoutManager);
+        if (savedInstanceState != null){
+            String userString = savedInstanceState.getString(INSTANCE_STATE_KEY);
+            users = new Gson().fromJson(userString, Users.class);
+            Log.d(TAG, "onCreate: " + users.getResults()[0].getName().getFirst());
+            adapter = new Adapter(users.getResults());
+            recyclerView.setAdapter(adapter);
+        } else {
+            retrofitCall();
+        }
+    }
+
+    private void retrofitCall() {
         Retrofit retrofit = new Retrofit.Builder()
                 .baseUrl("https://randomuser.me/api/")
                 .addConverterFactory(GsonConverterFactory.create())
@@ -48,4 +73,34 @@ public class MainActivity extends AppCompatActivity {
             }
         });
     }
-}
+
+    @Override
+    protected void onSaveInstanceState(Bundle outState) {
+        super.onSaveInstanceState(outState);
+        String userString = new Gson().toJson(users);
+        outState.putString(INSTANCE_STATE_KEY,userString);
+    }
+
+    @Override
+    public boolean onCreateOptionsMenu(Menu menu) {
+        MenuInflater inflater = getMenuInflater();
+        inflater.inflate(R.menu.menu, menu);
+        return true;
+    }
+    @Override
+    public boolean onOptionsItemSelected(MenuItem item) {
+        // Handle item selection
+        switch (item.getItemId()) {
+            case R.id.refresh:
+
+                retrofitCall();
+                mProgressDialog.show();
+
+            default:
+                return super.onOptionsItemSelected(item);
+        }
+    }
+        }
+
+
+
